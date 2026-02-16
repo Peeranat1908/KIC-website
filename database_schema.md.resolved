@@ -1,0 +1,54 @@
+```mermaid
+erDiagram
+    User ||--o{ Portfolio : has
+    Portfolio ||--o{ Holding : contains
+    Portfolio ||--o{ Transaction : records
+    Stock ||--o{ Holding : referenced_in
+    Stock ||--o{ Transaction : referenced_in
+
+    User {
+        uuid id PK
+        string email UK
+        string password
+        string full_name
+        string role "ADMIN | USER"
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
+    }
+
+    Portfolio {
+        uuid id PK
+        uuid user_id FK
+        float balance
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
+    }
+
+    Stock {
+        string symbol PK
+        string name
+        float current_price
+        timestamp updated_at
+    }
+
+    Holding {
+        uuid id PK
+        uuid portfolio_id FK
+        string stock_symbol FK
+        int quantity
+        float average_cost
+        timestamp purchase_date
+    }
+
+    Transaction {
+        uuid id PK
+        uuid portfolio_id FK
+        string stock_symbol FK
+        string type "BUY | SELL"
+        int quantity
+        float price
+        timestamp created_at
+    }
+```
