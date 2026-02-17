@@ -14,5 +14,5 @@ type Holding struct {
 	AverageCost  float64   `json:"average_cost"`
 	PurchaseDate time.Time `json:"purchase_date"`
 
-	Stock Stock `gorm:"foreignKey:StockSymbol" json:"stock,omitempty"`
+	Stock *Stock `gorm:"foreignKey:StockSymbol;references:Symbol" json:"stock,omitempty"`
 }

@@ -22,5 +22,5 @@ type Transaction struct {
 	Price       float64         `json:"price"`
 	CreatedAt   time.Time       `json:"created_at"`
 
-	Stock Stock `gorm:"foreignKey:StockSymbol" json:"stock,omitempty"`
+	Stock *Stock `gorm:"foreignKey:StockSymbol;references:Symbol" json:"stock,omitempty"`
 }

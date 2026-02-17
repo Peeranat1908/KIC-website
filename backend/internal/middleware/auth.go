@@ -1,23 +1,16 @@
 package middleware
 
 import (
-	"fmt"
 	"backend/internal/repository"
-	"os"
+	"backend/internal/utils"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 func RequireAuth(userRepo repository.UserRepository) fiber.Handler {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "dev-secret"
-	}
-
 	return func(c *fiber.Ctx) error {
-		// อ่าน token จาก cookie หรือ Authorization header
+		// Read token from cookie or Authorization header
 		tokenStr := c.Cookies("token")
 		if tokenStr == "" {
 			auth := c.Get("Authorization")
@@ -29,33 +22,23 @@ func RequireAuth(userRepo repository.UserRepository) fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing token"})
 		}
 
-        token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-            if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-                return nil, fmt.Errorf("unexpected signing method")
-            }
-            return []byte(secret), nil
-        })
-        if err != nil || !token.Valid {
-            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
-        }
+		// Validate token using utils
+		claims, err := utils.ValidateToken(tokenStr)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
+		}
 
-        claims, ok := token.Claims.(jwt.MapClaims)
-        if !ok {
-            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token claims"})
-        }
+		// Configure context for later use
+		c.Locals("user_id", claims.UserID)
+		c.Locals("role", claims.Role)
 
-        emailI, _ := claims["email"]
-        email, _ := emailI.(string)
-        if email == "" {
-            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token payload"})
-        }
+		// Fetch user from database
+		user, err := userRepo.FindByID(claims.UserID.String())
+		if err != nil || user == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user not found"})
+		}
 
-        user, err := userRepo.FindByEmail(email)
-        if err != nil || user == nil {
-            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user not found"})
-        }
-
-        c.Locals("current_user", user)
-        return c.Next()
-    }
+		c.Locals("current_user", user)
+		return c.Next()
+	}
 }

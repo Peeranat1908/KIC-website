@@ -9,7 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
-var secretKey = []byte(os.Getenv("JWT_SECRET"))
+var getSecret = func() []byte {
+	return []byte(os.Getenv("JWT_SECRET"))
+}
 
 type Claims struct {
 	UserID uuid.UUID `json:"user_id"`
@@ -18,7 +20,8 @@ type Claims struct {
 }
 
 func GenerateToken(userID uuid.UUID, role string) (string, error) {
-	if len(secretKey) == 0 {
+	secret := getSecret()
+	if len(secret) == 0 {
 		return "", errors.New("JWT_SECRET is not set")
 	}
 
@@ -32,12 +35,12 @@ func GenerateToken(userID uuid.UUID, role string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(secretKey)
+	return token.SignedString(secret)
 }
 
 func ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
+		return getSecret(), nil
 	})
 
 	if err != nil {
