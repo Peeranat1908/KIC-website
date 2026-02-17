@@ -5,13 +5,16 @@ import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Home, CheckCircle, XCircle }
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { Language } from '@/types/index';
 
+import api from '../../api/axios';
+
 interface RegisterPageProps {
   lang: Language;
 }
 
 export const RegisterPage: React.FC<RegisterPageProps> = ({ lang }) => {
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -21,42 +24,48 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ lang }) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-      if (formData.password !== formData.confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       alert(lang === Language.TH ? 'รหัสผ่านไม่ตรงกัน' : 'Passwords do not match');
       return;
     }
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // For now, navigate to login or home
+
+    try {
+      await api.post('/auth/register', {
+          email: formData.email,
+          password: formData.password,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+      });
+
+      // After registration, maybe auto-login or redirect to login?
+      // For now, redirect to login
       navigate('/login');
-    }, 2000);
+    } catch (error) {
+      console.error('Register Error:', error);
+      alert('Registration Failed: ' + (error as any).response?.data?.error || 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/api/auth/google-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: credentialResponse.credential }),
-      });
+      const res = await api.post('/auth/google-login', { token: credentialResponse.credential });
+      const data = res.data;
 
-      if (!res.ok) {
-        throw new Error('Google Login failed');
-      }
-
-      const data = await res.json();
       console.log('Login success:', data);
       
       // Store token
       if (data.token) {
         localStorage.setItem('token', data.token);
+        if (data.user?.first_name) {
+            localStorage.setItem('user_firstName', data.user.first_name);
+        }
+        window.dispatchEvent(new Event('storage'));
       }
       
       navigate('/');
@@ -118,21 +127,41 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ lang }) => {
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
-             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">
-                {lang === Language.TH ? 'ชื่อ-นามสกุล' : 'Full Name'}
-              </label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className="w-full bg-slate-800/50 border border-slate-700 text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:text-slate-600"
-                  placeholder="John Doe"
-                  required
-                />
-                <User className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={20} />
+            <div className="flex gap-4">
+              <div className="space-y-1.5 w-1/2">
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">
+                  {lang === Language.TH ? 'ชื่อจริง' : 'First Name'}
+                </label>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="w-full bg-slate-800/50 border border-slate-700 text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:text-slate-600"
+                    placeholder="John"
+                    required
+                  />
+                  <User className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={20} />
+                </div>
+              </div>
+              
+              <div className="space-y-1.5 w-1/2">
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">
+                  {lang === Language.TH ? 'นามสกุล' : 'Last Name'}
+                </label>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className="w-full bg-slate-800/50 border border-slate-700 text-white px-4 py-3 pl-11 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:text-slate-600"
+                    placeholder="Doe"
+                    required
+                  />
+                  <User className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={20} />
+                </div>
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { LogIn, LogOut } from 'lucide-react';
 import { Language, Page } from '../types/index';
 import { TRANSLATIONS } from '../constants/index';
 import Logo from '../assets/Logo.png';
@@ -16,6 +16,33 @@ export const Header: React.FC<HeaderProps> = ({ lang, setLang }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPage = location.pathname;
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const [userFirstName, setUserFirstName] = React.useState<string | null>(null);
+
+  // Check login status on mount and path change
+  React.useEffect(() => {
+    const checkLogin = () => {
+      const token = localStorage.getItem('token');
+      setIsLoggedIn(!!token);
+      setUserFirstName(localStorage.getItem('user_firstName'));
+    };
+    
+    checkLogin();
+    
+    // Listen for storage changes (for multiple tabs)
+    window.addEventListener('storage', checkLogin);
+    return () => window.removeEventListener('storage', checkLogin);
+  }, [location.pathname]); // Re-check on navigation
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_firstName');
+    setIsLoggedIn(false);
+    setUserFirstName(null);
+    setShowDropdown(false);
+    navigate('/');
+  };
 
   const getPath = (page: Page) => {
     switch (page) {
@@ -77,13 +104,47 @@ export const Header: React.FC<HeaderProps> = ({ lang, setLang }) => {
             <span>{lang === Language.TH ? '🇹🇭 TH' : '🇺🇸 EN'}</span>
           </button>
           
-          <Link
-            to="/login"
-            className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition font-bold text-sm"
-          >
-            <LogIn size={16} />
-            <span>{lang === Language.TH ? 'เข้าสู่ระบบ' : 'Login'}</span>
-          </Link>
+          {isLoggedIn ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="h-10 px-3 rounded-full bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center text-white shadow-lg hover:shadow-purple-500/25 transition-all gap-2"
+              >
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                    {userFirstName ? userFirstName.charAt(0).toUpperCase() : 'U'}
+                </div>
+                {userFirstName && <span className="text-sm font-bold pr-1">{userFirstName}</span>}
+              </button>
+              
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 overflow-hidden animate-in fade-in zoom-in duration-200">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                  >
+                    <LogOut size={16} />
+                    <span>{lang === Language.TH ? 'ออกจากระบบ' : 'Logout'}</span>
+                  </button>
+                </div>
+              )}
+              
+              {/* Backdrop to close dropdown */}
+              {showDropdown && (
+                <div 
+                  className="fixed inset-0 z-[-1]" 
+                  onClick={() => setShowDropdown(false)}
+                />
+              )}
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition font-bold text-sm"
+            >
+              <LogIn size={16} />
+              <span>{lang === Language.TH ? 'เข้าสู่ระบบ' : 'Login'}</span>
+            </Link>
+          )}
         </div>
       </div>
     </header>

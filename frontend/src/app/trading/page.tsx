@@ -2,8 +2,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Language, Stock, Portfolio, Transaction } from '../../types/index';
 import { TRANSLATIONS, INITIAL_STOCKS } from '../../constants/index';
+import { fetchStocks } from '../../api/stockService';
 import { getInvestmentInsights } from '../../api/geminiService';
 import { Card } from '../../components/Card';
+import StockChart from '../../components/StockChart';
 
 interface TradingPageProps {
   lang: Language;
@@ -31,20 +33,17 @@ export const TradingPage: React.FC<TradingPageProps> = ({ lang }) => {
   }, [portfolio, transactions]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStocks(prev => prev.map(s => {
-        const drift = 0.001; 
-        const volatility = 0.01; 
-        const change = s.price * (Math.random() * volatility * 2 - volatility + drift);
-        const newPrice = Math.max(0.1, s.price + change);
-        return {
-          ...s,
-          price: Number(newPrice.toFixed(2)),
-          change: Number((newPrice - s.price).toFixed(2)),
-          changePercent: Number(((newPrice / s.price - 1) * 100).toFixed(2))
-        };
-      }));
-    }, 4000);
+    const loadStocks = async () => {
+      const data = await fetchStocks();
+      if (data.length > 0) {
+        setStocks(data);
+      }
+    };
+    
+    loadStocks();
+    
+    // Refresh every 10 seconds
+    const interval = setInterval(loadStocks, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -107,6 +106,17 @@ export const TradingPage: React.FC<TradingPageProps> = ({ lang }) => {
               <p className="text-sm text-slate-500 italic">{insights || "Click Analyze to get insights."}</p>
             </Card>
           </div>
+
+          {selectedStock && (
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-bold text-slate-800">{selectedStock.symbol} Chart</h3>
+                 <span className="text-sm text-slate-500">{selectedStock.name}</span>
+              </div>
+              <StockChart symbol={selectedStock.symbol} />
+            </Card>
+          )}
+
           <Card className="p-0">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase">

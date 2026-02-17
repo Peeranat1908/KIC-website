@@ -5,6 +5,8 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Home } from 'lucide-react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { Language } from '@/types/index';
 
+import api from '../../api/axios';
+
 interface LoginPageProps {
   lang: Language;
 }
@@ -16,38 +18,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({ lang }) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      const data = res.data;
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        if (data.user?.first_name) {
+            localStorage.setItem('user_firstName', data.user.first_name);
+        }
+        window.dispatchEvent(new Event('storage'));
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Login Error:', error);
+      alert('Login Failed: ' + (error as any).response?.data?.error || 'Unknown error');
+    } finally {
       setIsLoading(false);
-      // For now, just go back to home on "success"
-      navigate('/');
-    }, 2000);
+    }
   };
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/api/auth/google-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: credentialResponse.credential }),
-      });
+      const res = await api.post('/auth/google-login', { token: credentialResponse.credential });
+      const data = res.data;
 
-      if (!res.ok) {
-        throw new Error('Google Login failed');
-      }
-
-      const data = await res.json();
       console.log('Login success:', data);
       
       // Store token (adjust based on your auth implementation)
       if (data.token) {
         localStorage.setItem('token', data.token);
+        if (data.user?.first_name) {
+            localStorage.setItem('user_firstName', data.user.first_name);
+        }
+        window.dispatchEvent(new Event('storage'));
       }
       
       navigate('/');
