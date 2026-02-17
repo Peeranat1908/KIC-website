@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Language } from './types';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
+import { Layout } from './components/Layout';
 import { HomePage } from './app/home/page';
 import { PortfolioPage } from './app/portfolio/page';
 import { MembersPage } from './app/members/page';
@@ -15,12 +14,7 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Language>(Language.TH);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900 selection:bg-blue-100 selection:text-blue-900">
-      <Header 
-        lang={lang} 
-        setLang={setLang} 
-      />
-      <main className="flex-grow">
+    <Layout lang={lang} setLang={setLang}>
         <Routes>
           <Route path="/" element={<HomePage lang={lang} />} />
           <Route path="/portfolio" element={<PortfolioPage lang={lang} />} />
@@ -31,9 +25,7 @@ const App: React.FC = () => {
           <Route path="/register" element={<RegisterPage lang={lang} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </main>
-      <Footer lang={lang} />
-    </div>
+    </Layout>
   );
 };
 
